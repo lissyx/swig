@@ -138,8 +138,8 @@ static void $jswrapper(const v8::WeakCallbackData<v8::Object, SWIGV8_Proxy> &dat
   v8::Local<v8::Object> object = data.GetValue();
   SWIGV8_Proxy *proxy = data.GetParameter();
 #else
-  static void $jswrapper(const v8::WeakCallbackInfo<SWIGV8_Proxy> &data) {
-  SWIGV8_Proxy *proxy = data.GetParameter();
+  static void $jswrapper(const v8::WeakCallbackInfo<SWIGV8_Proxy>::Callback &data) {
+  SWIGV8_Proxy *proxy; // = data.GetParameter();
 #endif
 
   if(proxy->swigCMemOwn && proxy->swigCObject) {
@@ -187,8 +187,8 @@ static void $jswrapper(const v8::WeakCallbackData<v8::Object, SWIGV8_Proxy> &dat
   v8::Local<v8::Object> object = data.GetValue();
   SWIGV8_Proxy *proxy = data.GetParameter();
 #else
-static void $jswrapper(const v8::WeakCallbackInfo<SWIGV8_Proxy> &data) {
-  SWIGV8_Proxy *proxy = data.GetParameter();
+static void $jswrapper(const v8::WeakCallbackInfo<SWIGV8_Proxy>::Callback &data) {
+  SWIGV8_Proxy *proxy; // = data.GetParameter();
 #endif
 
   if(proxy->swigCMemOwn && proxy->swigCObject) {

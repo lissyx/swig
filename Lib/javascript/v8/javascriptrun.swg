@@ -222,7 +222,7 @@ public:
 #elif (V8_MAJOR_VERSION-0) < 5
   void (*dtor) (const v8::WeakCallbackData<v8::Object, SWIGV8_Proxy> &data);
 #else
-  void (*dtor) (const v8::WeakCallbackInfo<SWIGV8_Proxy> &data);
+  void (*dtor) (const v8::WeakCallbackInfo<SWIGV8_Proxy>::Callback &data);
 #endif
 };
 
@@ -273,8 +273,8 @@ SWIGRUNTIME void SWIGV8_Proxy_DefaultDtor(v8::Isolate *, v8::Persistent< v8::Obj
 SWIGRUNTIME void SWIGV8_Proxy_DefaultDtor(const v8::WeakCallbackData<v8::Object, SWIGV8_Proxy> &data) {
   SWIGV8_Proxy *proxy = data.GetParameter();
 #else
-SWIGRUNTIME void SWIGV8_Proxy_DefaultDtor(const v8::WeakCallbackInfo<SWIGV8_Proxy> &data) {
-  SWIGV8_Proxy *proxy = data.GetParameter();
+SWIGRUNTIME void SWIGV8_Proxy_DefaultDtor(const v8::WeakCallbackInfo<SWIGV8_Proxy>::Callback &data) {
+   SWIGV8_Proxy *proxy; // = data.GetParameter();
 #endif
 
   delete proxy;
