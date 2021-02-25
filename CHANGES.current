@@ -4,42 +4,72 @@ See the RELEASENOTES file for a summary of changes in each release.
 Issue # numbers mentioned below can be found on Github. For more details, add
 the issue number to the end of the URL: https://github.com/swig/swig/issues/
 
-Version 4.0.2 (in progress)
+Version 4.1.0 (in progress)
 ===========================
 
-2020-01-13: wsfulton
-            [Python] #1595 Python -builtin constructors silently ignored keyword arguments.
-            Instead of silenty ignoring them, now a "TypeError: f() takes no keyword arguments"
-            exception is thrown if keyword arguments are used. Hence constructors and normal methods/
-            functions behave in the same way. Note, -keyword should be used with -builtin to obtain
-            keyword argument support.
+2021-02-24: tomleavy, yegorich, tungntpham
+            #1746 [Javascript] Add support for Node v12.
+            SWIG support is now for Node v6 and later only.
 
-2020-01-05: jschueller shadchin
-            [Python] #1670 #1696 Add missing field initializers introduced in python 3.8:
-            tp_vectorcall and tp_print.
+2020-10-10: wsfulton
+            #252 complex can now be used as a C identifier and doesn't give a syntax error.
 
-2020-01-05: friedrichatgc
-            [Octave] #1688 Change swig_this() to use size_t instead of long for compatibility
-            with Windows 64 bit.
+2020-10-10: lpsinger
+            #1770 Correct C complex support.
+            _Complex is now parsed as a keyword rather than complex as per the C99 standard.
+            The complex macro is available in the ccomplex.i library file along with other
+            complex number handling provided by the complex.h header.
 
-2020-01-05: treitmayr
-            [Ruby] #1692 #1689 Add support for Ruby 2.7
+2020-10-07: ZackerySpytz
+            [Python] #1812 Fix the error handling for the PyObject_GetBuffer() calls in
+            pybuffer.i.
 
-2019-12-30: treitmayr
-            [Ruby] #1653 #1668 Fix code generated when using -globalmodule option.
+2020-10-07: treitmayr
+            #1824 Add missing space in director method declaration returning
+            const pointer.
 
-2019-12-29: ZackerySpytz
-            [OCaml] #1686 Fix compilation errors with OCaml 4.09.0.
+2020-10-07: adelva1984
+            #1859 Remove all (two) exceptions from SWIG executable.
 
-2019-12-10: wsfulton
-            #1679 Fix parsing of C++11 identifiers with special meaning (final and override) when
-            they are used as part of the scope name of an identifier, such as a namespace name.
+2020-09-25: wsfulton
+            [C#, Java] #1874 Add ability to change the modifiers for the interface
+            generated when using the %interface macros.
 
-2019-11-26: wsfulton
-            [C#] #1628 'out' or 'ref' used in a cstype typemap was not always stripped out in parts
-            of director code generation.
+            For C# use the 'csinterfacemodifiers' typemap.
+            For Java use the 'javainterfacemodifiers' typemap.
 
-2019-11-01: wsfulton
-            [Python] #1595 Fix bug in support for keyword arguments (kwargs feature or -keyword)
-            when using -builtin. The fix is in the argument error checking when wrapping zero
-            argument constructors only.
+            For example:
+
+              %typemap(csinterfacemodifiers) X "internal interface"
+
+
+2020-09-24: geefr
+            [C#] #1868 Fix wchar_t* csvarout typemap for member variable wrappers.
+
+2020-08-28: wsfulton
+            [Java] #1862 Fix crashes in swig_connect_director during director class construction
+            when using the director class from multiple threads - a race condition initialising
+            block scope static variables. The fix is guaranteed when using C++11, but most
+            compilers also fix it when using C++03/C++98.
+
+2020-08-16: wsfulton
+            [Python] Add missing initializer for member ‘_heaptypeobject::ht_module’ when using
+            -builtin to complete Python 3.9 support.
+
+2020-08-16: wsfulton
+            [Python] Remove PyEval_InitThreads() call for Python 3.7 and later as Python calls
+            it automatically now. This removes a deprecation warning when using Python 3.9.
+
+2020-08-15: wsfulton
+            [Python] All Python examples and tests are written to be Python 2 and Python 3
+            compatible, removing the need for 2to3 to run the examples or test-suite.
+
+2020-08-13: wsfulton
+            [C#] Add support for void *VOID_INT_PTR for member variables.
+
+2020-07-29: chrisburr
+            #1843 [Python] Compilation error fix in SwigPyBuiltin_SetMetaType when using PyPy.
+
+2020-06-14: ZackerySpytz
+            #1642 #1809 Fix virtual comparison operators in director classes - remove incorrect
+            space in the function name, for example, operator= = is now operator==.
