@@ -184,6 +184,8 @@ CPP_TEST_CASES += \
 	director_classes \
 	director_classic \
 	director_constructor \
+	director_comparison_operators \
+	director_conversion_operators \
 	director_default \
 	director_detect \
 	director_enum \
@@ -627,6 +629,8 @@ DOXYGEN_TEST_CASES += \
 	doxygen_basic_notranslate \
 	doxygen_basic_translate \
 	doxygen_basic_translate_style2 \
+	doxygen_basic_translate_style3 \
+	doxygen_code_blocks \
 	doxygen_ignore \
 	doxygen_misc_constructs \
 	doxygen_nested_class \
@@ -714,6 +718,7 @@ C_TEST_CASES += \
 	nested_extend_c \
 	nested_structs \
 	newobject2 \
+	not_c_keywords \
 	overload_extend_c \
 	overload_extend2 \
 	preproc \

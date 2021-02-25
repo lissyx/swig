@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl The macros which aren't shipped with the autotools are stored in the
 dnl Tools/config directory in .m4 files.
 
-AC_INIT([swig],[4.0.2],[http://www.swig.org])
+AC_INIT([swig],[4.1.0],[http://www.swig.org])
 AC_PREREQ(2.60)
 
 AC_CONFIG_SRCDIR([Source/Swig/swig.h])
@@ -114,15 +114,6 @@ echo ""
 dnl Some test cases require Boost
 AX_BOOST_BASE(,,,)
 AC_SUBST(BOOST_CPPFLAGS)
-
-dnl How to specify include directories that may be system directories.
-# -I should not be used on system directories (GCC)
-if test "$GCC" = yes; then
-    ISYSTEM="-isystem "
-else
-    ISYSTEM="-I"
-fi
-AC_MSG_NOTICE(ISYSTEM: $ISYSTEM)
 
 dnl Info for building shared libraries ... in order to run the examples
 
@@ -333,6 +324,39 @@ case $host in
   *) ;;
 esac
 
+# Check for compiler pre-compiled header support
+AC_MSG_CHECKING([if compiler supports pre-compiled headers])
+PCHSUPPORT=no
+if test "$CLANGXX" = "yes"; then
+   PCHINCLUDEARG="-include-pch"
+   PCHINCLUDEEXT=".gch"
+else
+   PCHINCLUDEARG="-include"
+   PCHINCLUDEEXT=""
+fi
+AC_LANG_PUSH([C++])
+echo '#include <cstdlib>' > conftest.hpp
+echo '#include "conftest.hpp"' > conftest.cpp
+$CXX -c conftest.hpp 2>/dev/null
+if test $? -eq 0; then
+   if test -f conftest.hpp.gch; then
+      $CXX -H -c -I. ${PCHINCLUDEARG} ./conftest.hpp${PCHINCLUDEEXT} -o conftest.o conftest.cpp >conftest.out 2>&1
+      if test $? -eq 0; then
+         if test "$CLANGXX" = "yes"; then
+            PCHSUPPORT=yes
+         elif grep -q '^!.*conftest.hpp.gch$' conftest.out; then
+            PCHSUPPORT=yes
+         fi
+      fi
+   fi
+fi
+rm -f conftest.hpp conftest.cpp conftest.out
+AC_LANG_POP([C++])
+AC_MSG_RESULT([$PCHSUPPORT])
+AC_SUBST(PCHSUPPORT)
+AC_SUBST(PCHINCLUDEARG)
+AC_SUBST(PCHINCLUDEEXT)
+
 # Set info about shared libraries.
 AC_SUBST(SO)
 AC_SUBST(LDSHARED)
@@ -435,7 +459,7 @@ else
   alllang_default=yes
 fi
 
-AC_CHECK_PROGS(PKGCONFIG, [pkg-config])
+AC_PATH_TOOL([PKG_CONFIG], [pkg-config])
 
 #--------------------------------------------------------------------
 # Look for Tcl
@@ -451,7 +475,7 @@ AC_ARG_WITH(tcl,
  [  --with-tcl=path         Set location of Tcl package],[
 	TCLPACKAGE="$withval"], [TCLPACKAGE="$alllang_default"])
 AC_ARG_WITH(tclincl,[  --with-tclincl=path     Set location of Tcl include directory],[
-	TCLINCLUDE="$ISYSTEM$withval"], [TCLINCLUDE=])
+	TCLINCLUDE="-I$withval"], [TCLINCLUDE=])
 AC_ARG_WITH(tcllib,[  --with-tcllib=path      Set location of Tcl library directory],[
 	TCLLIB="-L$withval"], [TCLLIB=])
 
@@ -472,7 +496,9 @@ fi
 dirs="/usr/lib*/ /usr/lib*/tcl*/ /usr/local/lib*/ /usr/local/lib*/tcl*/"
 case $host in
 *-*-darwin*)
-  dirs="/System/Library/Frameworks/Tcl.framework/ $dirs"
+  tcl_framework="/System/Library/Frameworks/Tcl.framework/"
+  macos_sysroot="$(xcodebuild -version -sdk macosx Path 2>/dev/null)" # For MacOSX10.14 and later
+  dirs="$macos_sysroot$tcl_framework $tcl_framework $dirs"
   ;;
 *)
   ;;
@@ -493,7 +519,7 @@ else
     AC_MSG_RESULT(found $TCLCONFIG/tclConfig.sh)
     . $TCLCONFIG/tclConfig.sh
     if test -z "$TCLINCLUDE"; then
-        TCLINCLUDE=`echo $TCL_INCLUDE_SPEC | sed "s/-I/$ISYSTEM/"`
+        TCLINCLUDE=`echo $TCL_INCLUDE_SPEC`
     fi
     if test -z "$TCLLIB"; then
         TCLLIB=$TCL_LIB_SPEC
@@ -502,7 +528,7 @@ fi
 
 if test -z "$TCLINCLUDE"; then
    if test "x$TCLPACKAGE" != xyes; then
-	TCLINCLUDE="$ISYSTEM$TCLPACKAGE/include"
+	TCLINCLUDE="-I$TCLPACKAGE/include"
    fi
 fi
 
@@ -520,7 +546,7 @@ if test -z "$TCLINCLUDE"; then
 	for i in $dirs ; do
 		if test -r $i/tcl.h; then
 			AC_MSG_RESULT($i)
-			TCLINCLUDE="$ISYSTEM$i"
+			TCLINCLUDE="-I$i"
 			break
 		fi
 	done
@@ -895,30 +921,6 @@ if test -n "$PYINCLUDE" || test -n "$PY3INCLUDE" ; then
   fi
 fi
 
-AC_ARG_WITH(2to3, AS_HELP_STRING([--with-2to3=path], [Set location of Python 2to3 tool]), [PY2TO3BIN="$withval"], [PY2TO3BIN="yes"])
-if test -n "$PYTHON3"; then
-  if test "x$PY2TO3BIN" = xyes; then
-    py3to2=`echo $PYTHON3 | sed -e "s/python/2to3-/"`
-    AC_CHECK_PROGS(PY2TO3, $py3to2 2to3)
-    if test -z "$PY2TO3"; then
-      # Windows distributions don't always have the 2to3 executable
-      AC_MSG_CHECKING(for 2to3.py)
-      py2to3script="$PY3PREFIX/Tools/scripts/2to3.py"
-      if test -f "$py2to3script"; then
-        AC_MSG_RESULT($py2to3script)
-        PY2TO3="$PYTHON3 $py2to3script"
-      else
-        AC_MSG_RESULT(Not found)
-      fi
-    fi
-  else
-    PY2TO3="$PY2TO3BIN"
-  fi
-  if test -z "$PY2TO3"; then
-    PYTHON3=
-  fi
-fi
-
 #----------------------------------------------------------------
 # Look for Perl5
 #----------------------------------------------------------------
@@ -971,7 +973,7 @@ if test -n "$PERL"; then
 			AC_MSG_RESULT($PERL5LIB)
 		fi
     AC_MSG_CHECKING(for Perl5 ccflags)
- 		PERL5CCFLAGS=`($PERL -e 'use Config; print $Config{ccflags}, "\n"' | sed "s/-Wdeclaration-after-statement//" | sed "s/-I/$ISYSTEM/") 2>/dev/null`
+ 		PERL5CCFLAGS=`($PERL -e 'use Config; print $Config{ccflags}, "\n"' | sed "s/-Wdeclaration-after-statement//") 2>/dev/null`
  		if test -z "$PERL5CCFLAGS" ; then
  			AC_MSG_RESULT(not found)
  		else
@@ -1058,7 +1060,7 @@ if test -n "$OCTAVE"; then
    AS_IF([test "x`${OCTAVE} --version 2>/dev/null | sed -n -e '1p' | sed -n -e '/Octave, version/p'`" != x],[
       AC_MSG_RESULT([yes])
    ],[
-      AC_MSG_NOTICE([no])
+      AC_MSG_RESULT([no])
       OCTAVE=
    ])
 fi
@@ -1079,6 +1081,7 @@ if test -n "$OCTAVE"; then
   fi
   AC_MSG_RESULT([${mkoctfile}])
   AC_MSG_CHECKING([if ${mkoctfile} works])
+  mkoctfile="env - PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH ${mkoctfile}"
   AS_IF([test "x`${mkoctfile} --version 2>/dev/null | sed -n -e '1p' | sed -n -e '/mkoctfile, version/p'`" != x],[
       AC_MSG_RESULT([yes])
     ],[
@@ -1093,7 +1096,7 @@ if test -n "$OCTAVE"; then
    AC_MSG_CHECKING([for Octave preprocessor flags])
    OCTAVE_CPPFLAGS=
    for var in CPPFLAGS INCFLAGS ALL_CXXFLAGS; do
-      for flag in `env - ${mkoctfile} -p ${var}`; do
+      for flag in `${mkoctfile} -p ${var}`; do
          case ${flag} in
             -D*|-I*) OCTAVE_CPPFLAGS="${OCTAVE_CPPFLAGS} ${flag}";;
             *) ;;
@@ -1105,7 +1108,7 @@ if test -n "$OCTAVE"; then
    AC_MSG_CHECKING([for Octave compiler flags])
    OCTAVE_CXXFLAGS=
    for var in CXX ALL_CXXFLAGS; do
-      for flag in `env - ${mkoctfile} -p ${var}`; do
+      for flag in `${mkoctfile} -p ${var}`; do
          case ${flag} in
             -std=*|-g*|-W*) OCTAVE_CXXFLAGS="${OCTAVE_CXXFLAGS} ${flag}";;
             *) ;;
@@ -1125,10 +1128,10 @@ if test -n "$OCTAVE"; then
    AC_MSG_CHECKING([for Octave linker flags])
    OCTAVE_LDFLAGS=
    for var in OCTLIBDIR; do
-     OCTAVE_LDFLAGS="${OCTAVE_LDFLAGS} "-L`env - ${mkoctfile} -p ${var}`
+     OCTAVE_LDFLAGS="${OCTAVE_LDFLAGS} "-L`${mkoctfile} -p ${var}`
    done
    for var in RDYNAMIC_FLAG RLD_FLAG OCTAVE_LIBS LIBS; do
-     OCTAVE_LDFLAGS="${OCTAVE_LDFLAGS} "`env - ${mkoctfile} -p ${var}`
+     OCTAVE_LDFLAGS="${OCTAVE_LDFLAGS} "`${mkoctfile} -p ${var}`
    done
    AC_MSG_RESULT([$OCTAVE_LDFLAGS])
 
@@ -1210,8 +1213,8 @@ else
       AC_MSG_CHECKING(for Scilab header files)
       if test "$SCILABINCDIR" != ""; then
         dirs="$SCILABINCDIR"
-      elif test -n "$PKGCONFIG"; then
-        dirs=`$PKGCONFIG scilab --cflags-only-I | sed -e 's/-I//g'`
+      elif test -n "$PKG_CONFIG "; then
+        dirs=`$PKG_CONFIG  scilab --cflags-only-I | sed -e 's/-I//g'`
       else
         dirs=""
       fi
@@ -1595,11 +1598,11 @@ else
   # check for JavaScriptCore/Webkit libraries
   AC_ARG_WITH(jscorelib,[  --with-jscorelib=path      Set location of the JavaScriptCore/Webkit library directory],[JSCORELIB="-L$withval"], [JSCORELIB=])
 
-  if test -z "$JSCORELIB" -a -n "$PKGCONFIG"; then
+  if test -z "$JSCORELIB" -a -n "$PKG_CONFIG "; then
     AC_MSG_CHECKING(for JavaScriptCore/Webkit library)
-    if pkg-config javascriptcoregtk-1.0; then
-      JSCORELIB=`$PKGCONFIG --libs javascriptcoregtk-1.0`
-      JSCOREVERSION=`$PKGCONFIG --modversion javascriptcoregtk-1.0`
+    if $PKG_CONFIG  javascriptcoregtk-1.0; then
+      JSCORELIB=`$PKG_CONFIG  --libs javascriptcoregtk-1.0`
+      JSCOREVERSION=`$PKG_CONFIG  --modversion javascriptcoregtk-1.0`
     fi
     if test -z "$JSCORELIB"; then
       AC_MSG_RESULT(not found)
@@ -2292,7 +2295,7 @@ if test "$LUABIN"; then
   # look for the header files & set LUAFLAGS accordingly
   # will clear LUABIN if not present
   if test -n "$LUAINCLUDE"; then
-    AC_CHECK_FILE($LUAINCLUDE/lua.h,[LUAFLAGS="$ISYSTEM$LUAINCLUDE"],[LUABIN=])
+    AC_CHECK_FILE($LUAINCLUDE/lua.h,[LUAFLAGS="-I$LUAINCLUDE"],[LUABIN=])
   else
     LUA_OK="1"
     CFLAGS_SAVED=$CFLAGS
@@ -2316,7 +2319,7 @@ if test "$LUABIN"; then
         #echo "$i"
         if test -r $i/lua.h; then
           AC_MSG_RESULT($i/lua.h)
-          LUAFLAGS="$ISYSTEM$i"
+          LUAFLAGS="-I$i"
           break
         fi
       done
